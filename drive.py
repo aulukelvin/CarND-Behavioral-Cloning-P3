@@ -11,7 +11,7 @@ import eventlet.wsgi
 from PIL import Image
 from flask import Flask
 from io import BytesIO
-
+import cv2
 from keras.models import load_model
 import h5py
 from keras import __version__ as keras_version
@@ -42,11 +42,46 @@ class SimplePIController:
 
         return self.Kp * self.error + self.Ki * self.integral
 
+class SimplePDController:
+    def __init__(self, Kp, Kd):
+        self.Kp = Kp
+        self.Kd = Kd
+        self.set_point = 0.
+        self.error = 0.
+        self.diff = 0.
+        self.last = 0.
 
-controller = SimplePIController(0.1, 0.002)
-set_speed = 9
+    def set_desired(self, desired):
+        self.set_point = desired
+        self.last = desired
+
+    def update(self, measurement):
+        # proportional error
+        self.error = measurement - self.set_point
+
+        # integral error
+        self.diff = self.error - self.last
+        self.last = measurement
+        
+
+        return self.Kp * self.error + self.Kd * self.diff
+
+controller = SimplePIController(0.02, 0.0001)
+set_speed = 18
 controller.set_desired(set_speed)
 
+pdController = SimplePDController(1.0, 1.0)
+pdController.set_desired(0)
+
+pts1 = np.float32([[140,60],[180,60],[0,100],[320,100]])
+pts2 = np.float32([[140,0],[180,0],[0,120],[320,120]])
+
+M = cv2.getPerspectiveTransform(pts1,pts2)
+
+def transform(img):
+    dst = cv2.warpPerspective(img,M,(320,160))
+    dst = cv2.resize(dst, (64,64))
+    return dst
 
 @sio.on('telemetry')
 def telemetry(sid, data):
@@ -60,9 +95,9 @@ def telemetry(sid, data):
         # The current image from the center camera of the car
         imgString = data["image"]
         image = Image.open(BytesIO(base64.b64decode(imgString)))
-        image_array = np.asarray(image)
-        steering_angle = float(model.predict(image_array[None, :, :, :], batch_size=1))
-
+        image_array = transform(np.asarray(image)) / 255 -0.5
+        steering_angle = pdController.update(float(model.predict(image_array[None, :, :, :], batch_size=1)) )
+        
         throttle = controller.update(float(speed))
 
         print(steering_angle, throttle)

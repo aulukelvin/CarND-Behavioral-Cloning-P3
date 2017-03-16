@@ -69,10 +69,10 @@ In the data preprocessing, I found more than half of the data have the steering 
 The model contains dropout layers in order to reduce overfitting. I placed two dropout layers on top of the first and second fully-connected layers. The dropout servive rate is 0.7. 
 
 In the training process, I reserved 15% of the data as validation data set, and use seperated data generators for training data and validation data. Several data augmentation techniques have been used in the training data generator: 
-    - use left and right camera images;
-    - randomly shift image horizontally;
-    - randomly flip image over;
-    - randomly augment brightness of the images
+    * use left and right camera images;
+    * randomly shift image horizontally;
+    * randomly flip image over;
+    * randomly augment brightness of the images
 
 I noticed the model will be highly impacted by the imperfaction of the training data. Inspired by someone's 'live trainer' I developed a delta trainer which is re-train the almost-there model with hendpicked data set to make it able to pass through difficult scenarios.
 
@@ -85,14 +85,14 @@ I tried different batch sized and find out the model prefer larger dataset. So I
 #### 4. Appropriate training data
 
 The performance of the drive is heavily depends on the quality and quantity of the data. Because I'm a very terrible game player, I can't collect enough quality data by myself so I used the Udacity provided track 1 training data. I found out there're several issues with this dataset:
-    - the distribution. The data is significantly imbalanced. This will cause the less popular samples been ignored by the model. So I only kept 0.085 of the data set.
-    - the quality. I found out the confusing zigzag driving style was very likely copped from wrong training data. Just for example, when the image shows car is actually turning, sometimes the steering angle is zero, or sometimes the car started to jittering from one side to the other. So I find out the significant problematic sections and hand correct the steering label then fed the delta training data to re-train the model. I can see this can indeed enhance the performance of the trained model. 
+    * the distribution. The data is significantly imbalanced. This will cause the less popular samples been ignored by the model. So I only kept 0.085 of the data set.
+    * the quality. I found out the confusing zigzag driving style was very likely copped from wrong training data. Just for example, when the image shows car is actually turning, sometimes the steering angle is zero, or sometimes the car started to jittering from one side to the other. So I find out the significant problematic sections and hand correct the steering label then fed the delta training data to re-train the model. I can see this can indeed enhance the performance of the trained model. 
 
 ### Training Process
 Besides the train.py, there're three notebooks: 
-    - BehaviourCloning-EDA and preprocessing.ipynb, The notebook for explore the distribution of the data, generate trimmed training data(keep only 8.5% of the raw data), and also generate pickled image data source. The reason I use image data source is I noticed loading image directly from disk in the data generator is extremely inefficient. Even with my SSD, pre-loading image into memory can still yield 10 times faster training.
-    - BehaviourCloning.ipynb, the main part of the model traing, which load the trimmed driving log csv file and the pickled image data, then do split train/valid data set.It also contains aumentation logic, model definition, and a plot do evaluate the performance of the model and the distribution of the steering angles produced by the generator.
-    - BehaviourCloning-DeltaTrainer.ipynb. The logic of the Delta trainer is the same as the main model trainer. The only difference is it's been used when there're additional training data to get the model polished for some difficult scenarios. In my case I hand crafted 840 samples from the original testing data and fed them into the Delta trainer. The Delta trainer can really helps the car to perform better.
+    * BehaviourCloning-EDA and preprocessing.ipynb, The notebook for explore the distribution of the data, generate trimmed training data(keep only 8.5% of the raw data), and also generate pickled image data source. The reason I use image data source is I noticed loading image directly from disk in the data generator is extremely inefficient. Even with my SSD, pre-loading image into memory can still yield 10 times faster training.
+    * BehaviourCloning.ipynb, the main part of the model traing, which load the trimmed driving log csv file and the pickled image data, then do split train/valid data set.It also contains aumentation logic, model definition, and a plot do evaluate the performance of the model and the distribution of the steering angles produced by the generator.
+    * BehaviourCloning-DeltaTrainer.ipynb. The logic of the Delta trainer is the same as the main model trainer. The only difference is it's been used when there're additional training data to get the model polished for some difficult scenarios. In my case I hand crafted 840 samples from the original testing data and fed them into the Delta trainer. The Delta trainer can really helps the car to perform better.
     
 
 ### Model Architecture and Training Strategy

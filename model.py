@@ -19,22 +19,25 @@ import cv2
 import pickle
 from sklearn.utils import shuffle
 
+#loading trimmed driving log
 driving_log=pd.read_csv('./data/trimmed_driving_log.csv').sample(frac=1.0)
 
 driving_log.describe()
 
+#loading images
 f = open('./gallery.p', 'rb')   
 gallery = pickle.load(f)      
 f.close() 
 print(len(gallery))
 
+#brightness augmentation
 def augment_brightness(image):
     image = cv2.cvtColor(image,cv2.COLOR_RGB2HSV)
     random_bright = .25+np.random.uniform()
     
     image[:,:,2] = image[:,:,2]*random_bright
     return image
-
+#image shifting augmentation
 def trans_image(image,steer,trans_range=50, trans_y=False):
     """
     translate image and compensate for the translation on the steering angle
@@ -61,12 +64,12 @@ pts1 = np.float32([[140,60],[180,60],[0,100],[320,100]])
 pts2 = np.float32([[140,0],[180,0],[0,120],[320,120]])
 
 M = cv2.getPerspectiveTransform(pts1,pts2)
-
+#resize image to 64 x 64, trim off sky area
 def transform(img):
     dst = cv2.warpPerspective(img,M,(320,160))
     dst = cv2.resize(dst, (64,64))
     return dst / 255 - 0.5
-
+#train data generator
 y_train_log = []
 def generate_batch_samples(df, batch_size=128):    
     camera_shift_rate = {0:0, 1:0.27, 2:-0.27}
@@ -103,7 +106,7 @@ def generate_batch_samples(df, batch_size=128):
             y_train_log.append(angle)
         yield shuffle(np.array(batch_x), np.array(batch_y))
                 
-    
+#validation data generator    
 y_valid_log = []
 def generate_batch_valid(df, batch_size=128):
     while 1:

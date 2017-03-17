@@ -88,16 +88,16 @@ I noticed the model will be highly impacted by the imperfaction of the training 
 Also in the drive.py, I intoduced a PD controller to reduce the jittering of the car drive.
 
 The performance of the drive is heavily depends on the quality and quantity of the data. Because I'm a very terrible game player, I can't collect enough quality data by myself so I used the Udacity provided track 1 training data. I found out there're several issues with this dataset:
-    * size of the training data. There're only 8036 sample images, which is quite small to produce good result.
-    * the distribution. The data is significantly imbalanced. This will cause the less popular samples been ignored by the model. 
-    * the quality. I found out the confusing zigzag driving style was very likely copped from wrong training data. Just for example, when some of the image shows car is actually turning, the steering angle in the training log is zero.
-    * speed issue. In the previous data generator I read images directly from disk and do all normalization and augmentation on the fly. I found out the speed is extremely slow. It's not uncommon to have to spend more than 10 minutes to finish a single epoch. 
+ * size of the training data. There're only 8036 sample images, which is quite small to produce good result.
+ * the distribution. The data is significantly imbalanced. This will cause the less popular samples been ignored by the model. 
+ * the quality. I found out the confusing zigzag driving style was very likely copped from wrong training data. Just for example, when some of the image shows car is actually turning, the steering angle in the training log is zero.
+ * speed issue. In the previous data generator I read images directly from disk and do all normalization and augmentation on the fly. I found out the speed is extremely slow. It's not uncommon to have to spend more than 10 minutes to finish a single epoch. 
     
 To make the training works smoothly on the small data set, I applied several augmentation to enlarge the training data set. In the training process, I reserved 15% of the data as validation data set, and use seperated data generators for training data and validation data. Several data augmentation techniques have been used in the training data generator: 
-    * use left and right camera images;
-    * randomly shift image horizontally;
-    * randomly flip image over;
-    * randomly augment brightness of the images
+ * use left and right camera images;
+ * randomly shift image horizontally;
+ * randomly flip image over;
+ * randomly augment brightness of the images
 
 To handle the imbalanced data, I firstly built a trimmed data set which simply just drop out over 90% of the zero steering angle samples. After the trimming the distribution looks not that imbalabced. 
 
@@ -109,75 +109,53 @@ To increase the speed, I load the image data in the memory so that the generator
 
 ### Training Process
 Besides the train.py, there're three notebooks: 
-    * BehaviourCloning-EDA and preprocessing.ipynb, The notebook for explore the distribution of the data, generate trimmed training data(keep only 8.5% of the raw data), and also generate pickled image data source. The reason I use image data source is I noticed loading image directly from disk in the data generator is extremely inefficient. Even with my SSD, pre-loading image into memory can still yield 20 times faster training.
-    * BehaviourCloning.ipynb, the main part of the model traing, which load the trimmed driving log csv file and the pickled image data, then do split train/valid data set.It also contains aumentation logic, model definition, and a plot do evaluate the performance of the model and the distribution of the steering angles produced by the generator.
-    * BehaviourCloning-DeltaTrainer.ipynb. The logic of the Delta trainer is the same as the main model trainer. The only difference is it's been used when there're additional training data to get the model polished for some difficult scenarios. In my case I hand crafted 840 samples from the original testing data and fed them into the Delta trainer. The Delta trainer can really helps the car to perform better.
+ * BehaviourCloning-EDA and preprocessing.ipynb, The notebook for explore the distribution of the data, generate trimmed training data(keep only 8.5% of the raw data), and also generate pickled image data source. The reason I use image data source is I noticed loading image directly from disk in the data generator is extremely inefficient. Even with my SSD, pre-loading image into memory can still yield 20 times faster training.
+ * BehaviourCloning.ipynb, the main part of the model traing, which load the trimmed driving log csv file and the pickled image data, then do split train/valid data set.It also contains aumentation logic, model definition, and a plot do evaluate the performance of the model and the distribution of the steering angles produced by the generator.
+ * BehaviourCloning-DeltaTrainer.ipynb. The logic of the Delta trainer is the same as the main model trainer. The only difference is it's been used when there're additional training data to get the model polished for some difficult scenarios. In my case I hand crafted 840 samples from the original testing data and fed them into the Delta trainer. The Delta trainer can really helps the car to perform better.
     
 ### Model Architecture and Training Strategy
 
 #### 1. Solution Design Approach
 
 I firstly used a pretrained VGG16 model to run through the track 1 sample data. Surprisingly I found out the car can already drive through the whole lap. But I also realized there're several problems which took me the rest of the project time to fix: 
--- * The training result is not repeatable. Sometimes a trained model can work well sometimes not so much, although the data set and the parameters are the same. I believe the problem is the data set is too small. Every time I train the model the train/test data set will be randomly splited, sometimes some very important data will be put into validation data set instead of the training set so that the model will unable to learn enough information. 
--- * The car jittering a lot on the road. Two factors may lead to this issue. Firstly, the training data has lot of noise, for example steering angle was not align with the image; or even worse, the training data set has recorded lot of jittering drive. So that the model will copy the behaviour of the bad driving data. And the last factor, just like in reality, the steering angle should also depends on the car speed. The higher the speed, the stabler the steering must be. But the current model doesn't take speed into training so the model can only work under certain limit.   
+ * The training result is not repeatable. Sometimes a trained model can work well sometimes not so much, although the data set and the parameters are the same. I believe the problem is the data set is too small. Every time I train the model the train/test data set will be randomly splited, sometimes some very important data will be put into validation data set instead of the training set so that the model will unable to learn enough information. 
+ * The car jittering a lot on the road. Two factors may lead to this issue. Firstly, the training data has lot of noise, for example steering angle was not align with the image; or even worse, the training data set has recorded lot of jittering drive. So that the model will copy the behaviour of the bad driving data. And the last factor, just like in reality, the steering angle should also depends on the car speed. The higher the speed, the stabler the steering must be. But the current model doesn't take speed into training so the model can only work under certain limit.   
 
 So I augmented the training data to enlarge the data set and it works really well. I then fine trained the model use the delta trainer to enhance the driving performance. I adjusted the PI controller in the drive.py to make the car smoothly speed up untill reached the speed limit. Finally, inspired by the PI controller, I developed a PD controller to reduce the car jittering. 
 
 #### 2. Final Model Architecture
 
 Here is a description of the architecture:
-Layer (type)                     Output Shape          Param #     Connected to                     
-====================================================================================================
-input_1 (InputLayer)             (None, 64, 64, 3)     0                                            
-____________________________________________________________________________________________________
-block1_conv1 (Convolution2D)     (None, 64, 64, 64)    1792        input_1[0][0]                    
-____________________________________________________________________________________________________
-block1_conv2 (Convolution2D)     (None, 64, 64, 64)    36928       block1_conv1[0][0]               
-____________________________________________________________________________________________________
-block1_pool (MaxPooling2D)       (None, 32, 32, 64)    0           block1_conv2[0][0]               
-____________________________________________________________________________________________________
-block2_conv1 (Convolution2D)     (None, 32, 32, 128)   73856       block1_pool[0][0]                
-____________________________________________________________________________________________________
-block2_conv2 (Convolution2D)     (None, 32, 32, 128)   147584      block2_conv1[0][0]               
-____________________________________________________________________________________________________
-block2_pool (MaxPooling2D)       (None, 16, 16, 128)   0           block2_conv2[0][0]               
-____________________________________________________________________________________________________
-block3_conv1 (Convolution2D)     (None, 16, 16, 256)   295168      block2_pool[0][0]                
-____________________________________________________________________________________________________
-block3_conv2 (Convolution2D)     (None, 16, 16, 256)   590080      block3_conv1[0][0]               
-____________________________________________________________________________________________________
-block3_conv3 (Convolution2D)     (None, 16, 16, 256)   590080      block3_conv2[0][0]               
-____________________________________________________________________________________________________
-block3_pool (MaxPooling2D)       (None, 8, 8, 256)     0           block3_conv3[0][0]               
-____________________________________________________________________________________________________
-block4_conv1 (Convolution2D)     (None, 8, 8, 512)     1180160     block3_pool[0][0]                
-____________________________________________________________________________________________________
-block4_conv2 (Convolution2D)     (None, 8, 8, 512)     2359808     block4_conv1[0][0]               
-____________________________________________________________________________________________________
-block4_conv3 (Convolution2D)     (None, 8, 8, 512)     2359808     block4_conv2[0][0]               
-____________________________________________________________________________________________________
-block4_pool (MaxPooling2D)       (None, 4, 4, 512)     0           block4_conv3[0][0]               
-____________________________________________________________________________________________________
-block5_conv1 (Convolution2D)     (None, 4, 4, 512)     2359808     block4_pool[0][0]                
-____________________________________________________________________________________________________
-block5_conv2 (Convolution2D)     (None, 4, 4, 512)     2359808     block5_conv1[0][0]               
-____________________________________________________________________________________________________
-block5_conv3 (Convolution2D)     (None, 4, 4, 512)     2359808     block5_conv2[0][0]               
-____________________________________________________________________________________________________
-block5_pool (MaxPooling2D)       (None, 2, 2, 512)     0           block5_conv3[0][0]               
-____________________________________________________________________________________________________
-flatten_1 (Flatten)              (None, 2048)          0           block5_pool[0][0]                
-____________________________________________________________________________________________________
-dense_1 (Dense)                  (None, 512)           1049088     flatten_1[0][0]                  
-____________________________________________________________________________________________________
-dropout_1 (Dropout)              (None, 512)           0           dense_1[0][0]                    
-____________________________________________________________________________________________________
-dense_2 (Dense)                  (None, 128)           65664       dropout_1[0][0]                  
-____________________________________________________________________________________________________
-dropout_2 (Dropout)              (None, 128)           0           dense_2[0][0]                    
-____________________________________________________________________________________________________
-prediction (Dense)               (None, 1)             129         dropout_2[0][0]                  
-====================================================================================================
+
+|Layer (type)                   |  Output Shape         |   Param #   |  Connected to         |             
+|-------------------------------|-----------------------|-------------|-----------------------|
+|input_1 (InputLayer)           |  (None, 64, 64, 3)    |   0         |                       |                  
+|block1_conv1 (Convolution2D)   |  (None, 64, 64, 64)   |   1792      |    input_1[0][0]      |              
+|block1_conv2 (Convolution2D)   |  (None, 64, 64, 64)   |   36928     |    block1_conv1[0][0] |              
+|block1_pool (MaxPooling2D)     |  (None, 32, 32, 64)   |   0         |    block1_conv2[0][0] |              
+|block2_conv1 (Convolution2D)   |  (None, 32, 32, 128)  |   73856     |    block1_pool[0][0]  |              
+|block2_conv2 (Convolution2D)   |  (None, 32, 32, 128)  |   147584    |    block2_conv1[0][0] |              
+|block2_pool (MaxPooling2D)     |  (None, 16, 16, 128)  |   0         |    block2_conv2[0][0] |              
+|block3_conv1 (Convolution2D)   |  (None, 16, 16, 256)  |   295168    |    block2_pool[0][0]  |              
+|block3_conv2 (Convolution2D)   |  (None, 16, 16, 256)  |   590080    |    block3_conv1[0][0] |              
+|block3_conv3 (Convolution2D)   |  (None, 16, 16, 256)  |   590080    |    block3_conv2[0][0] |              
+|block3_pool (MaxPooling2D)     |  (None, 8, 8, 256)    |   0         |    block3_conv3[0][0] |              
+|block4_conv1 (Convolution2D)   |  (None, 8, 8, 512)    |   1180160   |    block3_pool[0][0]  |              
+|block4_conv2 (Convolution2D)   |  (None, 8, 8, 512)    |   2359808   |    block4_conv1[0][0] |              
+|block4_conv3 (Convolution2D)   |  (None, 8, 8, 512)    |   2359808   |   block4_conv2[0][0]  |             
+|block4_pool (MaxPooling2D)     |  (None, 4, 4, 512)    |   0         |    block4_conv3[0][0] |              
+|block5_conv1 (Convolution2D)   |  (None, 4, 4, 512)    |   2359808   |    block4_pool[0][0]  |              
+|block5_conv2 (Convolution2D)   |  (None, 4, 4, 512)    |   2359808   |    block5_conv1[0][0] |              
+|block5_conv3 (Convolution2D)   |  (None, 4, 4, 512)    |   2359808   |    block5_conv2[0][0] |              
+|block5_pool (MaxPooling2D)     |  (None, 2, 2, 512)    |   0         |    block5_conv3[0][0] |              
+|
+|flatten_1 (Flatten)            |  (None, 2048)         |   0         |    block5_pool[0][0]  |              
+|dense_1 (Dense)                |  (None, 512)          |   1049088   |    flatten_1[0][0]    |              
+|dropout_1 (Dropout)            |  (None, 512)          |   0         |    dense_1[0][0]      |              
+|dense_2 (Dense)                |  (None, 128)          |   65664     |    dropout_1[0][0]    |              
+|dropout_2 (Dropout)            |  (None, 128)          |   0         |    dense_2[0][0]      |              
+|prediction (Dense)             |  (None, 1)            |   129       |    dropout_2[0][0]    |              
+
 Total params: 15,829,569
 Trainable params: 1,114,881
 Non-trainable params: 14,714,688
@@ -185,4 +163,4 @@ Non-trainable params: 14,714,688
 ### What haven't tried
  * The track2. Limited by my time and my PC gaming skill, it's really hard for me to collect good quality training data. So I have to regretfully give up the track 2.
  * Maybe I can put car speed into the training process to make the car run smoother at high speed.
- * If I transfer the image into HSV color space and only train the model use the S channel, maybe the computation can becomes easier and the model may more tolerant to lighting change.  
+ * If I transfer the image into HSV color space and only train the model use the S channel, maybe the computation can becomes easier and the model may more tolerant to lighting change. 

@@ -1,10 +1,10 @@
 # SDC Behavioral Cloning Project
-
+---
 [//]: # (Image References)
 
 [image1]: ./charts/rawdistribution.png "raw distribution"
 [image2]: ./charts/augmented.png "augmented.png"
-[image3]: ./charts/trimmed.png "trimmed distribution"
+[image3]: ./charts/trimmeddistribution.png "trimmed distribution"
 [image4]: ./charts/placeholder_small.png "Recovery Image"
 [image5]: ./charts/placeholder_small.png "Recovery Image"
 [image6]: ./charts/placeholder_small.png "Normal Image"
@@ -93,13 +93,19 @@ The performance of the drive is heavily depends on the quality and quantity of t
  * the quality. I found out the confusing zigzag driving style was very likely copped from wrong training data. Just for example, when some of the image shows car is actually turning, the steering angle in the training log is zero.
  * speed issue. In the previous data generator I read images directly from disk and do all normalization and augmentation on the fly. I found out the speed is extremely slow. It's not uncommon to have to spend more than 10 minutes to finish a single epoch. 
     
+To handle the imbalanced data, I firstly built a trimmed data set which simply just drop out over 90% of the zero steering angle samples. After the trimming the distribution looks not that imbalabced. Before the data trimming, the raw steering angle was distributed like the following:
+![raw distribution][image1]
+
+After the trimming, the distribution is like below, we can see other nearly invisible in the previous histogram showing up in the new histogram:
+![trimmed histogram][image3]
+
 To make the training works smoothly on the small data set, I applied several augmentation to enlarge the training data set. In the training process, I reserved 15% of the data as validation data set, and use seperated data generators for training data and validation data. Several data augmentation techniques have been used in the training data generator: 
  * use left and right camera images;
  * randomly shift image horizontally;
  * randomly flip image over;
  * randomly augment brightness of the images
-
-To handle the imbalanced data, I firstly built a trimmed data set which simply just drop out over 90% of the zero steering angle samples. After the trimming the distribution looks not that imbalabced. 
+The augmented steering angle histogram is like the following:
+![augmented histogram][image2]
 
 To increase the data quality, I firstly use the trimmed dataset to train a rough model and then I find out the most significant difficult road sections and hand correct the steering label and save the new data set as the Delta data set. Then I fed the delta training data to fine train the model. I can see this can indeed enhance the performance of the trained model. I finally hand corrected 840 of the difficult section images and use them to fine train the model. Because this delta data set is pretty small, so I don't preserve dedicated validation set. I use 3 fold validation instead. This strategy works very well. It can help the model get better performance on the road.
 
@@ -159,8 +165,8 @@ Here is a description of the architecture:
 Total params: 15,829,569
 Trainable params: 1,114,881
 Non-trainable params: 14,714,688
-
-### What haven't tried
+---
+## What haven't tried
  * The track2. Limited by my time and my PC gaming skill, it's really hard for me to collect good quality training data. So I have to regretfully give up the track 2.
  * Maybe I can put car speed into the training process to make the car run smoother at high speed.
  * If I transfer the image into HSV color space and only train the model use the S channel, maybe the computation can becomes easier and the model may more tolerant to lighting change. 

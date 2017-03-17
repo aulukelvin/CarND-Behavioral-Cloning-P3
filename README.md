@@ -2,13 +2,13 @@
 
 [//]: # (Image References)
 
-[image1]: ./examples/placeholder.png "Model Visualization"
-[image2]: ./examples/placeholder.png "Grayscaling"
-[image3]: ./examples/placeholder_small.png "Recovery Image"
-[image4]: ./examples/placeholder_small.png "Recovery Image"
-[image5]: ./examples/placeholder_small.png "Recovery Image"
-[image6]: ./examples/placeholder_small.png "Normal Image"
-[image7]: ./examples/placeholder_small.png "Flipped Image"
+[image1]: ./charts/rawdistribution.png "raw distribution"
+[image2]: ./charts/augmented.png "augmented.png"
+[image3]: ./charts/trimmed.png "trimmed distribution"
+[image4]: ./charts/placeholder_small.png "Recovery Image"
+[image5]: ./charts/placeholder_small.png "Recovery Image"
+[image6]: ./charts/placeholder_small.png "Normal Image"
+[image7]: ./charts/placeholder_small.png "Flipped Image"
 
 ## Rubric Points
 Here I will consider the [rubric points](https://review.udacity.com/#!/rubrics/432/view) individually and describe how I addressed each point in my implementation.  
@@ -80,13 +80,22 @@ Also in the drive.py, I intoduced a PD controller to reduce the jittering of the
 
 #### 3. Model parameter tuning
 
-I tried different batch sized and find out the model prefer larger dataset. So I decreased the images size from (320X160) to (64X64). The final batch_size is 450. The epoch was set to 20. The model used an adam optimizer, so the learning rate was not tuned manually.
+I tried different batch sized and find out the model prefer larger dataset. So I decreased the images size from (320X160) to (64X64). The final batch_size is 450. I applied Adam optimizer to reduce the hassle tuning learning rate. I set the epoch to 20 and set early_stopping tolerance to 3. 
 
 #### 4. Appropriate training data
 
 The performance of the drive is heavily depends on the quality and quantity of the data. Because I'm a very terrible game player, I can't collect enough quality data by myself so I used the Udacity provided track 1 training data. I found out there're several issues with this dataset:
     * the distribution. The data is significantly imbalanced. This will cause the less popular samples been ignored by the model. So I only kept 0.085 of the data set.
-    * the quality. I found out the confusing zigzag driving style was very likely copped from wrong training data. Just for example, when the image shows car is actually turning, sometimes the steering angle is zero, or sometimes the car started to jittering from one side to the other. So I find out the significant problematic sections and hand correct the steering label then fed the delta training data to re-train the model. I can see this can indeed enhance the performance of the trained model. 
+    * the quality. I found out the confusing zigzag driving style was very likely copped from wrong training data. Just for example, when the image shows car is actually turning, sometimes the steering angle is zero, or sometimes the car started to jittering from one side to the other. 
+    * speed issue. In the previous data generator I read images directly from disk and do all normalization and augmentation on the fly. I found out the speed is extremely slow. It's not uncommon to have to spend more than 10 minutes to finish a single epoch. 
+    
+To handle the imbalanced data, I firstly built a trimmed data set which simply just drop out over 90% of the zero steering angle samples. 
+
+To increase the data quality, I firstly use the trimmed dataset to train a rough model and then I find out the most significant difficult road sections and hand correct the steering label and save the new data set as the Delta data set. Then I fed the delta training data to fine train the model. I can see this can indeed enhance the performance of the trained model. 
+
+Even after the Delta training, the car is still jittering significantly on the road. So I introduced a PD controller to help the drive, which also seems good.
+
+To increase the speed, I load the image data in the memory so that the generator can save the time reading disk. Now the everage epoch run is only 25 seconds, a 20X enhancement.
 
 ### Training Process
 Besides the train.py, there're three notebooks: 
@@ -99,20 +108,11 @@ Besides the train.py, there're three notebooks:
 
 #### 1. Solution Design Approach
 
-The overall strategy for deriving a model architecture was to ...
-
-My first step was to use a convolution neural network model similar to the ... I thought this model might be appropriate because ...
-
-In order to gauge how well the model was working, I split my image and steering angle data into a training and validation set. I found that my first model had a low mean squared error on the training set but a high mean squared error on the validation set. This implied that the model was overfitting. 
-
-To combat the overfitting, I modified the model so that ...
-
-Then I ... 
-
-The final step was to run the simulator to see how well the car was driving around track one. There were a few spots where the vehicle fell off the track... to improve the driving behavior in these cases, I ....
-
-At the end of the process, the vehicle is able to drive autonomously around the track without leaving the road.
-
+I firstly build a fine-tunned VGG16 pretrained model to run through the track 1 sample data and surprisingly I found out the car can already drive through the whole lap. But I also realized there're several problems: 
+-- * The training result is not repeatable. Sometimes a trained model can work well sometimes not so much, although the data set and the parameters are the same.  
+-- * The car jittering a lot on the road.
+-- * The speed stability turned to worse along with the increased speed. The stable speed is quite low, only below 10mph.
+So I 
 #### 2. Final Model Architecture
 
 The final model architecture (model.py lines 18-24) consisted of a convolution neural network with the following layers and layer sizes ...

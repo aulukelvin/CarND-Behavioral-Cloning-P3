@@ -24,6 +24,7 @@ My project includes the following files:
 * README.md summarizing the results
 
 Note: in order to recover the model.h5 from the splitted files please execute:
+
 Mac or Linux:
 ```sh
   cat model.h5a* > model.h5
@@ -39,8 +40,8 @@ python drive.py model.h5
 ```
 
 #### 3. Submission code is usable and readable
+In the notebooks folder I have included three notebooks to cover explotary analysis, preprocessing, data caching, trainging, evaluation and fine-traing process. The model.py file contains the code for training and saving the convolution neural network. The file shows the pipeline I used for training and validating the model, and it contains comments to explain how the code works.
 
-The model.py file contains the code for training and saving the convolution neural network. The file shows the pipeline I used for training and validating the model, and it contains comments to explain how the code works.
 ---
 ### Model Architecture and Training Strategy
 
@@ -91,7 +92,8 @@ The performance of the drive is heavily depends on the quality and quantity of t
  * the distribution. The data is significantly imbalanced. This will cause the less popular samples been ignored by the model. 
  * the quality. I found out the confusing zigzag driving style was very likely copped from wrong training data. Just for example, when some of the image shows car is actually turning, the steering angle in the training log is zero.
  * speed issue. In the previous data generator I read images directly from disk and do all normalization and augmentation on the fly. I found out the speed is extremely slow. It's not uncommon to have to spend more than 10 minutes to finish a single epoch. 
-    
+
+
 To handle the imbalanced data, I firstly built a trimmed data set which simply just drop out over 90% of the zero steering angle samples. After the trimming the distribution looks not that imbalabced. Before the data trimming, the raw steering angle was distributed like the following:
 
 ![raw distribution][image1]

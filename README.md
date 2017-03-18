@@ -93,12 +93,13 @@ The performance of the drive is heavily depends on the quality and quantity of t
  * speed issue. In the previous data generator I read images directly from disk and do all normalization and augmentation on the fly. I found out the speed is extremely slow. It's not uncommon to have to spend more than 10 minutes to finish a single epoch. 
     
 To handle the imbalanced data, I firstly built a trimmed data set which simply just drop out over 90% of the zero steering angle samples. After the trimming the distribution looks not that imbalabced. Before the data trimming, the raw steering angle was distributed like the following:
+
 ![raw distribution][image1]
 
 After the trimming, the distribution is like below, we can see other nearly invisible in the previous histogram showing up in the new histogram:
 ![trimmed histogram][image3]
 
-I did a explotary data analysis to get a feeling of the data. I randomly plotted the images from center camera and both left and right cameras to see the difference.
+I did a explotary data analysis to get a feeling of the data. I grouped the sample data into different bins according to their steering angles and randomly plotted the image from each bins including center camera and both left and right cameras to see the difference between the three cameras and the link between the images and the steering angles.
 ![EDA][image4]
 To make the training works smoothly on the small data set, I applied several augmentation to enlarge the training data set. In the training process, I reserved 15% of the data as validation data set, and use seperated data generators for training data and validation data. Several data augmentation techniques have been used in the training data generator: 
  * use left and right camera images;
@@ -166,6 +167,7 @@ Here is a description of the architecture:
 Total params: 15,829,569
 Trainable params: 1,114,881
 Non-trainable params: 14,714,688
+
 ---
 ## What haven't tried
  * The track2. Limited by my time and my PC gaming skill, it's really hard for me to collect good quality training data. So I have to regretfully give up the track 2.

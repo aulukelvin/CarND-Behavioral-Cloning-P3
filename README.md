@@ -1,11 +1,10 @@
 # SDC Behavioral Cloning Project
----
 [//]: # (Image References)
 
 [image1]: ./charts/rawdistribution.png "raw distribution"
 [image2]: ./charts/augmented.png "augmented.png"
 [image3]: ./charts/trimmeddistribution.png "trimmed distribution"
-[image4]: ./charts/placeholder_small.png "Recovery Image"
+[image4]: ./charts/EDA.png "EDA Image"
 [image5]: ./charts/placeholder_small.png "Recovery Image"
 [image6]: ./charts/placeholder_small.png "Normal Image"
 [image7]: ./charts/placeholder_small.png "Flipped Image"
@@ -22,9 +21,9 @@ My project includes the following files:
 * model.py containing the script to create and train the model
 * drive.py for driving the car in autonomous mode
 * model.h5 containing a trained convolution neural network (due to GitHub file size limit the model.h5 was splitted into 3 parts which will have to be combined together as explained below in detail)
-* writeup_report.md summarizing the results
+* README.md summarizing the results
 
-Note: in order to recover the model.h5 please run:
+Note: in order to recover the model.h5 from the splitted files please execute:
 Mac or Linux:
 ```sh
   cat model.h5a* > model.h5
@@ -42,7 +41,7 @@ python drive.py model.h5
 #### 3. Submission code is usable and readable
 
 The model.py file contains the code for training and saving the convolution neural network. The file shows the pipeline I used for training and validating the model, and it contains comments to explain how the code works.
-
+---
 ### Model Architecture and Training Strategy
 
 #### 1. An appropriate model architecture has been employed
@@ -83,7 +82,7 @@ I tried different batch sized and find out the model prefer larger dataset. So I
 
 In the data preprocessing, I found more than half of the data have the steering angle as zero. This imbalanced data may causes the model be overwhelmed by the zero steering angle samples and overlook other testing senarios. So I only kapt 0.085 of the zero steering angle data plus all other sample data. 
 
-I noticed the model will be highly impacted by the imperfaction of the training data. Inspired by someone's 'live trainer' I developed a delta trainer which is re-train the almost-there model with hendpicked data set to make it able to pass through difficult scenarios.
+I noticed the model was highly impacted by the imperfaction of the training data. Inspired by someone's 'live trainer' I developed a delta trainer which is re-train the almost-there model with hendpicked data set to make it able to pass through difficult scenarios.
 
 Also in the drive.py, I intoduced a PD controller to reduce the jittering of the car drive.
 
@@ -99,6 +98,8 @@ To handle the imbalanced data, I firstly built a trimmed data set which simply j
 After the trimming, the distribution is like below, we can see other nearly invisible in the previous histogram showing up in the new histogram:
 ![trimmed histogram][image3]
 
+I did a explotary data analysis to get a feeling of the data. I randomly plotted the images from center camera and both left and right cameras to see the difference.
+![EDA][image4]
 To make the training works smoothly on the small data set, I applied several augmentation to enlarge the training data set. In the training process, I reserved 15% of the data as validation data set, and use seperated data generators for training data and validation data. Several data augmentation techniques have been used in the training data generator: 
  * use left and right camera images;
  * randomly shift image horizontally;
@@ -109,7 +110,7 @@ The augmented steering angle histogram is like the following:
 
 To increase the data quality, I firstly use the trimmed dataset to train a rough model and then I find out the most significant difficult road sections and hand correct the steering label and save the new data set as the Delta data set. Then I fed the delta training data to fine train the model. I can see this can indeed enhance the performance of the trained model. I finally hand corrected 840 of the difficult section images and use them to fine train the model. Because this delta data set is pretty small, so I don't preserve dedicated validation set. I use 3 fold validation instead. This strategy works very well. It can help the model get better performance on the road.
 
-Even after the Delta training, the car is still jittering significantly on the road. So I introduced a PD controller to help the drive, which also seems good.
+Even after the Delta training, the car is still jittering significantly on the road. So I introduced a PD controller to help the drive, which also seems good. 
 
 To increase the speed, I load the image data in the memory so that the generator can save the time reading disk. Now the everage epoch run is only 25 seconds, a 20X enhancement.
 
